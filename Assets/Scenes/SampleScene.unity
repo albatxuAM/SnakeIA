@@ -247,13 +247,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cam: {fileID: 963194227}
   size: {x: 30, y: 30}
-  ramdomSeed: 0
-  debug: 1
-  cubePrefab: {fileID: 6712454256842774861, guid: 49e84f8ae7a42114ebafefb3f39f5ec8, type: 3}
-  wallMaterial: {fileID: 2100000, guid: 12983682e4c34be478da38c149aadfa2, type: 2}
-  floorMaterial: {fileID: 2100000, guid: 332b62aebe5a4ff4a8c95eb0a8d75125, type: 2}
-  snakeMaterial: {fileID: 2100000, guid: 60b8a22d410745144af555110e90c108, type: 2}
-  appleMaterial: {fileID: 2100000, guid: 8acd5540cd1c9584c8c175d4e39edfec, type: 2}
+  randomSeed: 0
+  floorPrefab: {fileID: 6712454256842774861, guid: 49e84f8ae7a42114ebafefb3f39f5ec8, type: 3}
+  wallPrefab: {fileID: 6712454256842774861, guid: 7be601ae6516fc34db2aff60061ba9af, type: 3}
+  snakePrefab: {fileID: 6712454256842774861, guid: 5182e0eacbfc13c4eb3fdeed09a1922e, type: 3}
+  foodPrefab: {fileID: 6712454256842774861, guid: 5079e9928245d4647b32b751dec33644, type: 3}
 --- !u!4 &921736365
 Transform:
   m_ObjectHideFlags: 0

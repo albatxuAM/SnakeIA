@@ -3,125 +3,161 @@ using Random = System.Random;
 
 public class Board : MonoBehaviour
 {
-    [Header("Configuration")]
-    [Space(1)]
-    [SerializeField]
-    private Camera cam;
-    [SerializeField]
-    private Vector2Int size;
-    [SerializeField]
-    int ramdomSeed;
+    public static Board Instance { get; private set; }
 
-    private Grid2D<CellType> grid;
+    [Header("Configuration")]
+    [SerializeField] private Camera cam;
+    [SerializeField] private Vector2Int size;
+    [SerializeField] private int randomSeed;
+
+    [Header("MapBuild")]
+    [SerializeField] private GameObject floorPrefab;
+    [SerializeField] private GameObject wallPrefab;
+    [SerializeField] private GameObject snakePrefab;
+    [SerializeField] private GameObject foodPrefab;
+
+    //private Grid2D<CellType> grid;
+    private Grid2D<CellData> grid;
+
     private Random random;
 
+    private GameObject snakeInstance;
 
-    [Header("Debug variables")]
-    [Space(1)]
-    [SerializeField]
-    bool debug = true;
-    [SerializeField]
-    GameObject cubePrefab;
-    [SerializeField]
-    Material wallMaterial;
-    [SerializeField]
-    Material floorMaterial;
-    [SerializeField]
-    Material snakeMaterial;
-    [SerializeField]
-    Material appleMaterial;
+    private int score = 0;
+    public int Score => score;
+
+    private void Awake()
+    {
+        // Ensure only one instance exists
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+    }
 
     private void Start()
     {
         cam.transform.localPosition = new Vector3(size.x / 2, Mathf.Max(size.x, size.y), size.y / 2);
-        //cam.transform.LookAt(new Vector3(size.x / 2, 0, size.y / 2));
-        random = new Random(ramdomSeed);
-        generateBoard();
-        drawBoard();
+        random = new Random(randomSeed);
+        GenerateBoard();
+        DrawBoard();
+
+        // Repetir la generación de comida cada 5 segundos
+        //InvokeRepeating(nameof(SpawnFoodAtRandomPosition), 5f, 5f);
+        SpawnFoodAtRandomPosition();
     }
 
-    private void generateBoard()
+    private void GenerateBoard()
     {
-        grid = new Grid2D<CellType>(size, Vector2Int.zero);
+        grid = new Grid2D<CellData>(size, Vector2Int.zero);
 
-        //initialize board to empty cells
+        // Inicializar el grid
         for (int y = 0; y < size.y; y++)
         {
             for (int x = 0; x < size.x; x++)
             {
-                Vector2Int pos = new Vector2Int(x, y);
-
-                grid[pos] = CellType.Empty;
-
-                //PlaceFloor(pos);
+                // Inicializar el grid con celdas vacías y sin objetos asociados
+                grid[new Vector2Int(x, y)] = new CellData(CellType.Empty, null);
             }
         }
 
-        // size - 1 so the snake does not appear in a border
-        int randX = random.Next(0, size.x - 1);
-        int randY = random.Next(0, size.y - 1);
-        Vector2Int snakePos = new Vector2Int(randX, randY);
-        grid[snakePos] = CellType.Snake;
+        // Colocar la serpiente en una posición aleatoria
+        Vector2Int snakePos = new Vector2Int(random.Next(0, size.x), random.Next(0, size.y));
+        grid[snakePos] = new CellData(CellType.Snake, Instantiate(snakePrefab, new Vector3(snakePos.x, 0, snakePos.y), Quaternion.identity));
 
-        Vector2Int applePos = new Vector2Int(random.Next(0, size.x), random.Next(0, size.y));
-        grid[applePos] = CellType.Apple;
-
-        //PlaceSnake(new Vector2Int(randX, randY));
-        //apear direction 
-        //find nearest wall --> oposite to it
-
+        // Colocar la comida en una posición aleatoria diferente
+        Vector2Int foodPos;
+        do
+        {
+            foodPos = new Vector2Int(random.Next(0, size.x), random.Next(0, size.y));
+        }
+        while (grid[foodPos].cellType != CellType.Empty);
+        grid[foodPos] = new CellData(CellType.Food, Instantiate(foodPrefab, new Vector3(foodPos.x, 0.5f, foodPos.y), Quaternion.identity));
     }
 
-    private void drawBoard()
+
+    private void DrawBoard()
     {
+        // Dibujar el área jugable con suelo
         for (int y = 0; y < size.y; y++)
         {
             for (int x = 0; x < size.x; x++)
             {
-                Vector2Int pos = new Vector2Int(x, y);
+                Instantiate(floorPrefab, new Vector3(x, -1, y), Quaternion.identity, this.transform);
+            }
+        }
 
-                bool isAtMapEdge = pos.x == 0 || pos.x == size.x || pos.y == 0 || pos.y == size.y;
-
-                switch (grid[pos])
+        // Dibujar las paredes externas
+        for (int y = -1; y <= size.y; y++)
+        {
+            for (int x = -1; x <= size.x; x++)
+            {
+                if (x == -1 || x == size.x || y == -1 || y == size.y)
                 {
-                    case CellType.Empty:
-                        PlaceFloor(pos);
-                        break;
-                    case CellType.Apple:
-                        PlaceApple(pos);
-                        break;
-                    case CellType.Snake:
-                        PlaceSnake(pos);
-                        break;
+                    Instantiate(wallPrefab, new Vector3(x, 0, y), Quaternion.identity, this.transform);
                 }
             }
         }
     }
-    void PlaceCube(Vector2Int location, Vector2Int size, Material material, int locationY = 0)
+
+    public void SetCellData(Vector2Int position, CellData data)
     {
-        if (debug)
+        grid[position] = data;
+    }
+
+    public CellData GetCellData(Vector2Int position)
+    {
+        return grid[position];
+    }
+
+    public void DestroyGridObject(Vector2Int position)
+    {
+        if (grid[position].gameObject != null)
         {
-            GameObject go = Instantiate(cubePrefab, new Vector3(location.x - 0.5f, locationY, location.y - 0.5f), Quaternion.identity);
-            go.transform.SetParent(this.transform);
-            go.GetComponent<Transform>().localScale = new Vector3(size.x, 1, size.y);
-            go.GetComponent<MeshRenderer>().material = material;
+            Destroy(grid[position].gameObject); // Eliminar el objeto físico
         }
     }
 
-    void PlaceFloor(Vector2Int location)
+    public void SpawnFoodAtRandomPosition()
     {
-        PlaceCube(location, new Vector2Int(1, 1), floorMaterial, -1);
+        Vector2Int foodPos;
+        GameObject foodInstance;
+
+        do
+        {
+            foodPos = new Vector2Int(random.Next(0, size.x), random.Next(0, size.y));
+        } while (grid[foodPos].cellType != CellType.Empty); // Asegúrate de que la comida no se genere en una posición ocupada
+
+        // Crear y colocar la comida en la nueva posición
+        foodInstance = Instantiate(foodPrefab, new Vector3(foodPos.x, 0.5f, foodPos.y), Quaternion.identity);
+        grid[foodPos] = new CellData(CellType.Food, foodInstance); // Asignar la comida al grid
+
+        SetCellType(foodPos, CellType.Food); // Actualizar la celda como comida
     }
-    private void PlaceWall(Vector2Int location)
+
+    // Public access to the grid
+    public CellType GetCellType(Vector2Int position)
     {
-        PlaceCube(location, new Vector2Int(1, 1), wallMaterial);
+        // Retorna el tipo de celda dentro de CellData
+        return grid[position].cellType;
     }
-    private void PlaceSnake(Vector2Int location)
+
+    public void SetCellType(Vector2Int position, CellType type)
     {
-        PlaceCube(location, new Vector2Int(1, 1), snakeMaterial);
+        // Cambia el tipo de celda, manteniendo el GameObject
+        CellData currentCell = grid[position];
+        grid[position] = new CellData(type, currentCell.gameObject);
     }
-    private void PlaceApple(Vector2Int location)
+
+    public Vector2Int GetBoardSize()
     {
-        PlaceCube(location, new Vector2Int(1, 1), appleMaterial);
+        return size;
+    }
+    public void IncreaseScore()
+    {
+        score++;
     }
 }

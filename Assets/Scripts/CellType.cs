@@ -1,6 +1,7 @@
-﻿enum CellType
+﻿public enum CellType
 {
     Empty = 0,
+    Wall = 0,
     Snake = 1,
-    Apple = 2,
+    Food = 2,
 }
